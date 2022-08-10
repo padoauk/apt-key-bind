@@ -13,9 +13,6 @@ if [[ -z "${KEY_URL}" || -z "${KEY_NAME}" ]]; then
   exit 1
 fi
 
-echo KEY_URL $KEY_URL
-echo KEY_NAME $KEY_NAME
-
 DEBUG=echo
 DEBUG=""
 

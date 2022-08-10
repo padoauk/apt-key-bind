@@ -1,0 +1,59 @@
+#!/bin/bash
+
+KEY_URL=$1
+KEY_NAME=$2
+
+if [[ -z "${KEY_URL}" || -z "${KEY_NAME}" ]]; then
+  echo usage: $(basename $0) key_url key_name
+  echo    ex\) $(basename $0) https://apt.releases.hashicorp.com/gpg apt.releases.hashicorp.com
+  exit 1
+fi
+
+echo KEY_URL $KEY_URL
+echo KEY_NAME $KEY_NAME
+
+DEBUG=echo
+DEBUG=""
+
+$DEBUG rm -f /tmp/${KEY_NAME}.key
+
+cmd="curl -fsSL "$KEY_URL"  > /tmp/${KEY_NAME}.key"
+$DEBUG $cmd
+if [[ $? != 0 ]]; then
+  echo failed to fetch the key from $KEY_URL
+  exit 1
+fi
+
+cmd="gpg --no-default-keyring --keyring "$KEY_NAME" --import \"/tmp/${KEY_NAME}.key\""
+$DEBUG $cmd
+if [[ $? != 0 ]]; then
+  echo failed to import the key of /tmp/${KEY_NAME}.key 
+  exit 1
+fi
+
+cmd="gpg --no-default-keyring --keyring "$KEY_NAME" --export --output \"/tmp/${KEY_NAME}.gpg\""
+$DEBUG $cmd
+if [[ $? != 0 ]]; then
+  echo failed to export the key to /tmp/${KEY_NAME}.gpg 
+  exit 1
+fi
+
+f="/etc/apt/keyrings/${KEY_NAME}.gpg"
+if [[ -f "$f" ]]; then
+  echo $f exists
+  if [[ -z "$DEBUG" ]]; then exit 1; fi
+fi
+
+$DEBUG mv "/tmp/${KEY_NAME}.gpg" "$f"
+
+while read line; do
+    #echo $line | ruby -nle "$rb"
+    ln=$(echo $line | sed -e 's/\s\+/ /g')
+    if [[ $ln =~ \[(.*)\] ]]; then
+        x="s;${BASH_REMATCH[1]};${BASH_REMATCH[1]} signed-by=${f};"
+    else
+        x="s;^deb;deb [signed-by=$f];"
+    fi
+    echo $ln | sed "$x"
+done
+

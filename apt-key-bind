@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# COPYRIGHT (C) 2022 padoauk@gmail.com All Rights Reserved
+#
+
 KEY_URL=$1
 KEY_NAME=$2
 

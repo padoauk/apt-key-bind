@@ -7,7 +7,7 @@ apt-key-bind is a small script to automate following steps.
 
 # usage
 ```
-echo "apt_repository_segging" |  apt-key-bind pub_key_url key_name
+echo "apt_repository_setting" |  apt-key-bind pub_key_url key_name
 ```
 
 # example

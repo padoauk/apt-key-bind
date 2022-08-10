@@ -48,7 +48,6 @@ fi
 $DEBUG mv "/tmp/${KEY_NAME}.gpg" "$f"
 
 while read line; do
-    #echo $line | ruby -nle "$rb"
     ln=$(echo $line | sed -e 's/\s\+/ /g')
     if [[ $ln =~ \[(.*)\] ]]; then
         x="s;${BASH_REMATCH[1]};${BASH_REMATCH[1]} signed-by=${f};"

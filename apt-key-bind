@@ -4,8 +4,15 @@
 # COPYRIGHT (C) 2022 padoauk@gmail.com All Rights Reserved
 #
 
+FORCE=""
+if [[ $1 == "-f" ]]; then
+    FORCE="1"
+    shift
+fi
+
 KEY_URL=$1
 KEY_NAME=$2
+APT_KEYRING="/etc/apt/keyrings/${KEY_NAME}.gpg"
 
 if [[ -z "${KEY_URL}" || -z "${KEY_NAME}" ]]; then
   echo usage: $(basename $0) key_url key_name
@@ -13,39 +20,47 @@ if [[ -z "${KEY_URL}" || -z "${KEY_NAME}" ]]; then
   exit 1
 fi
 
+if [[ "${KEY_NAME}" != $(echo $KEY_NAME | sed 's; ;;') ]]; then
+  echo format error. key_name cannot contain space
+  exit 2
+fi
+
 DEBUG=echo
 DEBUG=""
 
 $DEBUG rm -f /tmp/${KEY_NAME}.key
+$DEBUG rm -f /tmp/${KEY_NAME}.gpg
+if [[ -n $FORCE ]]; then rm -f "$APT_KEYRING"; fi
 
-cmd="curl -fsSL "$KEY_URL"  > /tmp/${KEY_NAME}.key"
-$DEBUG $cmd
-if [[ $? != 0 ]]; then
-  echo failed to fetch the key from $KEY_URL
-  exit 1
-fi
+function excheck() {
+  local res=$1
+  local msg=$2
+  if [[ $res != 0 ]]; then
+    echo $msg
+    exit 1
+  fi
+}
 
-cmd="gpg --no-default-keyring --keyring "$KEY_NAME" --import \"/tmp/${KEY_NAME}.key\""
-$DEBUG $cmd
-if [[ $? != 0 ]]; then
-  echo failed to import the key of /tmp/${KEY_NAME}.key 
-  exit 1
-fi
+$DEBUG curl -fsSL $KEY_URL -o /tmp/${KEY_NAME}.key
+excheck $? "failed to fetch the key from $KEY_URL"
 
-cmd="gpg --no-default-keyring --keyring "$KEY_NAME" --export --output \"/tmp/${KEY_NAME}.gpg\""
-$DEBUG $cmd
-if [[ $? != 0 ]]; then
-  echo failed to export the key to /tmp/${KEY_NAME}.gpg 
-  exit 1
-fi
+$DEBUG gpg --no-default-keyring --keyring $KEY_NAME --import /tmp/${KEY_NAME}.key
+excheck $? "failed to import the key of /tmp/${KEY_NAME}.key"
 
-f="/etc/apt/keyrings/${KEY_NAME}.gpg"
-if [[ -f "$f" ]]; then
+$DEBUG gpg --no-default-keyring --keyring $KEY_NAME --export --output /tmp/${KEY_NAME}.gpg
+excheck $? "failed to export the key to /tmp/${KEY_NAME}.gpg"
+
+if [[ -f "$APT_KEYRING" ]]; then
   echo $f exists
   if [[ -z "$DEBUG" ]]; then exit 1; fi
 fi
 
-$DEBUG mv "/tmp/${KEY_NAME}.gpg" "$f"
+$DEBUG mv "/tmp/${KEY_NAME}.gpg" "$APT_KEYRING"
+excheck $? "failed to write $APT_KEYRING"
+
+if [[ ! -p /dev/stdin ]]; then
+  exit 0
+fi
 
 while read line; do
     ln=$(echo $line | sed -e 's/\s\+/ /g')
@@ -54,6 +69,8 @@ while read line; do
     else
         x="s;^deb;deb [signed-by=$f];"
     fi
+    if [[ -n "${DEBUG}" ]]; then echo $x; fi
     echo $ln | sed "$x"
 done
 
+exit 0

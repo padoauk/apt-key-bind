@@ -6,12 +6,24 @@
 
 FORCE=""
 if [[ $1 == "-f" ]]; then
-    FORCE="1"
-    shift
+  FORCE="1"
+else
+  KEY_URL=$1
 fi
+shift
 
-KEY_URL=$1
-KEY_NAME=$2
+if [[ $1 == "-f" ]]; then
+  FORCE="1"
+else
+  KEY_NAME=$1
+fi
+shift
+
+if [[ $1 == "-f" ]]; then
+  FORCE="1"
+fi
+shift
+
 APT_KEYRING="/etc/apt/keyrings/${KEY_NAME}.gpg"
 
 if [[ -z "${KEY_URL}" || -z "${KEY_NAME}" ]]; then
